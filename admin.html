@@ -8,369 +8,315 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
   <link href="https://fonts.cdnfonts.com/css/old-london" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="db.js"></script>
 </head>
 <body class="admin-page">
+  <div id="root"></div>
 
-  <div class="paper-texture"></div>
-  <div class="vignette"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
 
-  <header class="admin-header">
-    <div class="header-left">
-      <span class="logo-sm">SHER LOCKED</span>
-      <span class="header-sep">|</span>
-      <span class="admin-badge">⚙ INSPECTOR'S CONTROL ROOM</span>
-    </div>
-    <div class="header-right">
-      <span class="live-indicator"></span>
-      <span id="liveTeamCount">0 teams</span>
-      <button id="resetGameBtn" style="background:none;border:1px solid rgba(139,26,26,0.6);color:rgba(242,232,213,0.7);font-family:var(--font-type);font-size:0.58rem;letter-spacing:0.12em;padding:0.3rem 0.8rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(139,26,26,0.4)';this.style.color='#f2e8d5'" onmouseout="this.style.background='none';this.style.color='rgba(242,232,213,0.7)'">⚠ RESET GAME</button>
-    </div>
-  </header>
+    function App() {
+      const [activeTab, setActiveTab] = useState("clues");
+      const [teams, setTeams] = useState([]);
+      const [clues, setClues] = useState([]);
+      const [rounds, setRounds] = useState({});
+      
+      const [clueTitle, setClueTitle] = useState("");
+      const [clueDesc, setClueDesc] = useState("");
+      const [clueRound, setClueRound] = useState("1");
+      const [clueFile, setClueFile] = useState(null);
+      
+      const fileInputRef = useRef(null);
+      const [uploading, setUploading] = useState(false);
+      const [saving, setSaving] = useState(false);
+      const [msg, setMsg] = useState(null);
+      const [msgType, setMsgType] = useState("");
 
-  <!-- TAB NAV -->
-  <div class="admin-tabs">
-    <button class="admin-tab active" data-tab="clues">📁 CLUES</button>
-    <button class="admin-tab" data-tab="teams">👥 TEAMS</button>
-    <button class="admin-tab" data-tab="rounds">🔐 ROUNDS</button>
-  </div>
+      const [resetting, setResetting] = useState(false);
 
-  <!-- TAB: CLUES -->
-  <div class="admin-tab-content active" id="tab-clues">
-    <div class="admin-layout">
+      useEffect(() => {
+        const updateState = () => {
+          const db = window.getDB();
+          setTeams(db.teams);
+          setClues(db.clues.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+          setRounds(db.rounds);
+        };
+        updateState();
+        const unsubscribe = window.subscribeDB(updateState);
+        return () => unsubscribe();
+      }, []);
 
-      <!-- LEFT: Add clue -->
-      <div class="admin-left">
-        <div class="admin-card">
-          <div class="admin-card-title">＋ NEW CLUE</div>
-          <label class="field-label">TITLE</label>
-          <input type="text" id="clueTitle" class="admin-input" placeholder="e.g. Suspect's Diary Entry"/>
+      const showMsg = (text, type) => {
+        setMsg(text);
+        setMsgType(type);
+        setTimeout(() => setMsg(null), 4000);
+      };
 
-          <label class="field-label" style="margin-top:0.8rem;">DESCRIPTION</label>
-          <textarea id="clueDesc" class="admin-textarea" rows="4" placeholder="Describe the clue..."></textarea>
+      const handleReset = () => {
+        if (!confirm("⚠ RESET GAME?\n\nThis will permanently delete ALL teams, clues, and rounds. This cannot be undone.\n\nType OK to confirm.")) return;
+        setResetting(true);
+        setTimeout(() => {
+          const freshDB = { teams: [], clues: [], rounds: {1: false, 2: false, 3: false, 4: false, 5: false} };
+          window.saveDB(freshDB);
+          setResetting(false);
+        }, 1000);
+      };
 
-          <div class="two-col" style="margin-top:0.8rem">
-            <div>
-              <label class="field-label">ROUND</label>
-              <select id="clueRound" class="round-select">
-                <option>1</option><option>2</option><option>3</option>
-                <option>4</option><option>5</option>
-              </select>
-            </div>
-            <div>
-              <label class="field-label">IMAGE / AUDIO <span style="color:var(--ink-faint);font-size:0.55rem">(free upload)</span></label>
-              <input type="file" id="clueMedia" class="admin-file" accept="image/*,audio/*" style="margin-top:0.3rem"/>
-              <div id="uploadProgress" class="hidden" style="margin-top:0.4rem;font-family:var(--font-type);font-size:0.6rem;color:var(--ink-faint);">⏳ Uploading...</div>
-            </div>
-          </div>
+      const handleAddClue = async () => {
+        if (!clueTitle.trim() || !clueDesc.trim()) { showMsg("⚠ Title and description required.", "error"); return; }
 
-          <button id="addClueBtn" class="admin-btn pink" style="margin-top:1rem">SAVE CLUE (DRAFT)</button>
-          <div id="addClueMsg" class="submit-msg hidden"></div>
-        </div>
-      </div>
+        let uploadedUrl = null, uploadedType = null;
 
-      <!-- CENTER: All clues -->
-      <div class="admin-center">
-        <div class="section-title">
-          <span class="section-icon">📁</span> ALL CLUES
-          <span class="clue-count" id="adminClueCount">0</span>
-        </div>
-        <div id="adminClueList" class="admin-clue-list">
-          <div class="empty-state" id="adminEmpty">
-            <div class="empty-icon">📋</div>
-            <div>No clues yet.</div>
-          </div>
-        </div>
-      </div>
+        if (clueFile) {
+          setUploading(true);
+          setSaving(true);
+          try {
+            const formData = new FormData();
+            formData.append("file", clueFile);
+            formData.append("upload_preset", "Sherlocked again");
+            const res = await fetch("https://api.cloudinary.com/v1_1/duagi0eqn/auto/upload", {
+              method: "POST", body: formData
+            });
+            const data = await res.json();
+            if (data.secure_url) {
+              uploadedUrl  = data.secure_url;
+              uploadedType = clueFile.type.startsWith("audio") ? "audio" : "image";
+            } else {
+              throw new Error(data.error?.message || "Upload failed");
+            }
+          } catch(e) {
+            showMsg("⚠ Upload failed: " + e.message, "error");
+            setUploading(false); setSaving(false);
+            return;
+          }
+          setUploading(false);
+        } else {
+          setSaving(true);
+        }
 
-    </div>
-  </div>
-
-  <!-- TAB: TEAMS -->
-  <div class="admin-tab-content" id="tab-teams">
-    <div class="teams-panel">
-      <div class="section-title">
-        <span class="section-icon">👥</span> REGISTERED TEAMS
-        <span class="clue-count" id="teamsCount">0</span>
-      </div>
-      <div id="teamsList" class="teams-list">
-        <div class="empty-sub-note">No teams registered yet.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB: ROUNDS -->
-  <div class="admin-tab-content" id="tab-rounds">
-    <div class="rounds-panel">
-      <div class="section-title">
-        <span class="section-icon">🔐</span> ROUND CONTROLS
-      </div>
-      <div id="roundControlsList" class="round-controls-list"></div>
-    </div>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, query, orderBy,
-      onSnapshot, addDoc, updateDoc, doc, serverTimestamp,
-      setDoc, getDoc, getDocs, deleteDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { firebaseConfig } from "./firebase-config.js";
-
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
-
-    // ── RESET GAME ──
-    document.getElementById("resetGameBtn").addEventListener("click", async () => {
-      const confirmed = confirm("⚠ RESET GAME?\n\nThis will permanently delete ALL teams, clues, and rounds. This cannot be undone.\n\nType OK to confirm.");
-      if (!confirmed) return;
-
-      const btn = document.getElementById("resetGameBtn");
-      btn.textContent = "RESETTING...";
-      btn.disabled = true;
-
-      try {
-        // Delete all collections in parallel
-        const deleteCollection = async (colName) => {
-          const snap = await getDocs(collection(db, colName));
-          const deletes = snap.docs.map(d => deleteDoc(doc(db, colName, d.id)));
-          await Promise.all(deletes);
+        const newClue = {
+          id: window.generateId(),
+          title: clueTitle.trim(),
+          description: clueDesc.trim(),
+          round: parseInt(clueRound),
+          mediaUrl: uploadedUrl,
+          mediaType: uploadedType,
+          released: false,
+          createdAt: new Date().toISOString()
         };
 
-        await Promise.all([
-          deleteCollection("teams"),
-          deleteCollection("clues"),
-          deleteCollection("rounds")
-        ]);
+        const db = window.getDB();
+        db.clues.push(newClue);
+        window.saveDB(db);
 
-        btn.textContent = "✓ RESET DONE";
-        btn.style.borderColor = "rgba(26,100,26,0.6)";
-        btn.style.color = "#7acc7a";
-        setTimeout(() => {
-          btn.textContent = "⚠ RESET GAME";
-          btn.disabled = false;
-          btn.style.borderColor = "rgba(139,26,26,0.6)";
-          btn.style.color = "rgba(242,232,213,0.7)";
-        }, 3000);
-      } catch(e) {
-        alert("Reset failed: " + e.message);
-        btn.textContent = "⚠ RESET GAME";
-        btn.disabled = false;
-      }
-    });
+        showMsg("✓ Clue saved as draft.", "success");
+        setClueTitle(""); setClueDesc(""); setClueRound("1"); setClueFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setSaving(false);
+      };
 
-    // ── TABS ──
-    document.querySelectorAll(".admin-tab").forEach(tab => {
-      tab.addEventListener("click", () => {
-        document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
-        document.querySelectorAll(".admin-tab-content").forEach(c => c.classList.remove("active"));
-        tab.classList.add("active");
-        document.getElementById("tab-" + tab.dataset.tab).classList.add("active");
-      });
-    });
-
-    // ── TEAM COUNT ──
-    onSnapshot(collection(db, "teams"), snap => {
-      document.getElementById("liveTeamCount").textContent = `${snap.size} team${snap.size !== 1 ? "s" : ""}`;
-    });
-
-    // ── ADD CLUE ──
-    const addBtn = document.getElementById("addClueBtn");
-    const addMsg = document.getElementById("addClueMsg");
-
-    addBtn.addEventListener("click", async () => {
-      const title = document.getElementById("clueTitle").value.trim();
-      const desc  = document.getElementById("clueDesc").value.trim();
-      const round = parseInt(document.getElementById("clueRound").value);
-
-      if (!title || !desc) { showAddMsg("⚠ Title and description required.", "error"); return; }
-
-      const file = document.getElementById("clueMedia").files[0];
-      const mediaUrl  = document.getElementById("clueMediaUrl") ? document.getElementById("clueMediaUrl").value.trim() || null : null;
-      const mediaType = mediaUrl ? "image" : null;
-
-      let uploadedUrl = null, uploadedType = null;
-
-      if (file) {
-        addBtn.textContent = "UPLOADING...";
-        document.getElementById("uploadProgress").classList.remove("hidden");
-        try {
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("upload_preset", "Sherlocked again");
-          const res = await fetch("https://api.cloudinary.com/v1_1/duagi0eqn/auto/upload", {
-            method: "POST", body: formData
-          });
-          const data = await res.json();
-          if (data.secure_url) {
-            uploadedUrl  = data.secure_url;
-            uploadedType = file.type.startsWith("audio") ? "audio" : "image";
-          } else {
-            throw new Error(data.error?.message || "Upload failed");
-          }
-        } catch(e) {
-          showAddMsg("⚠ Upload failed: " + e.message, "error");
-          addBtn.disabled = false;
-          addBtn.textContent = "SAVE CLUE (DRAFT)";
-          document.getElementById("uploadProgress").classList.add("hidden");
-          return;
+      const handleReleaseClue = (id, currentlyReleased) => {
+        const db = window.getDB();
+        const clue = db.clues.find(c => c.id === id);
+        if (clue) {
+          clue.released = !currentlyReleased;
+          clue.releasedAt = !currentlyReleased ? new Date().toISOString() : null;
+          window.saveDB(db);
         }
-        document.getElementById("uploadProgress").classList.add("hidden");
-        addBtn.textContent = "SAVING...";
-      }
+      };
 
-      addBtn.disabled = true;
-      addBtn.textContent = "SAVING...";
+      const handleDeleteClue = (id) => {
+        if (!confirm("Delete this clue?")) return;
+        const db = window.getDB();
+        db.clues = db.clues.filter(c => c.id !== id);
+        window.saveDB(db);
+      };
 
-      try {
-        await addDoc(collection(db, "clues"), {
-          title, description: desc, round,
-          mediaUrl: uploadedUrl, mediaType: uploadedType,
-          released: false,
-          createdAt: serverTimestamp()
-        });
-        showAddMsg("✓ Clue saved as draft.", "success");
-        document.getElementById("clueTitle").value = "";
-        document.getElementById("clueDesc").value  = "";
-        document.getElementById("clueMedia").value = "";
-      } catch(e) {
-        showAddMsg("⚠ Failed: " + e.message, "error");
-      }
-      addBtn.disabled = false;
-      addBtn.textContent = "SAVE CLUE (DRAFT)";
-    });
+      const handleEliminateTeam = (id, currentlyEliminated) => {
+        const action = currentlyEliminated ? "reinstate" : "eliminate";
+        if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this team?`)) return;
+        const db = window.getDB();
+        const team = db.teams.find(t => t.id === id);
+        if (team) {
+          team.eliminated = !currentlyEliminated;
+          window.saveDB(db);
+        }
+      };
 
-    function showAddMsg(text, type) {
-      addMsg.textContent = text;
-      addMsg.className = "submit-msg " + type;
-      setTimeout(() => addMsg.className = "submit-msg hidden", 4000);
-    }
+      const handleToggleRound = (r, currentlyLocked) => {
+        const db = window.getDB();
+        db.rounds[r] = !currentlyLocked;
+        window.saveDB(db);
+      };
 
-    // ── CLUE LIST ──
-    const adminClueList  = document.getElementById("adminClueList");
-    const adminEmpty     = document.getElementById("adminEmpty");
-    const adminClueCount = document.getElementById("adminClueCount");
+      return (
+        <React.Fragment>
+          <div className="paper-texture"></div>
+          <div className="vignette"></div>
 
-    onSnapshot(query(collection(db, "clues"), orderBy("createdAt", "desc")), snap => {
-      const clues = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      adminClueCount.textContent = clues.length;
-      adminClueList.querySelectorAll(".admin-clue-item").forEach(c => c.remove());
-
-      if (clues.length === 0) { adminEmpty.style.display = "flex"; return; }
-      adminEmpty.style.display = "none";
-
-      clues.forEach(clue => {
-        const item = document.createElement("div");
-        item.className = "admin-clue-item" + (clue.released ? " released" : "");
-        item.innerHTML = `
-          <div class="admin-clue-top">
-            <span class="clue-round-tag">R${clue.round}</span>
-            <span class="admin-clue-title">${escHtml(clue.title)}</span>
-            <span class="release-badge ${clue.released ? "live" : "draft"}">${clue.released ? "● LIVE" : "○ DRAFT"}</span>
-          </div>
-          <div class="admin-clue-desc">${escHtml(clue.description || "")}</div>
-          <div class="admin-clue-actions">
-            <button class="admin-btn ${clue.released ? "grey" : "pink"} small release-btn" data-id="${clue.id}" data-released="${clue.released}">
-              ${clue.released ? "RETRACT" : "RELEASE NOW"}
-            </button>
-            <button class="admin-btn grey small delete-btn" data-id="${clue.id}">DELETE</button>
-          </div>
-        `;
-        adminClueList.appendChild(item);
-      });
-
-      adminClueList.querySelectorAll(".release-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const released = btn.dataset.released === "true";
-          await updateDoc(doc(db, "clues", btn.dataset.id), {
-            released: !released,
-            releasedAt: !released ? serverTimestamp() : null
-          });
-        });
-      });
-
-      adminClueList.querySelectorAll(".delete-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          if (!confirm("Delete this clue?")) return;
-          await updateDoc(doc(db, "clues", btn.dataset.id), { deleted: true, released: false });
-        });
-      });
-    });
-
-    // ── TEAMS LIST ──
-    const teamsList  = document.getElementById("teamsList");
-    const teamsCount = document.getElementById("teamsCount");
-
-    onSnapshot(collection(db, "teams"), snap => {
-      const teams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      teamsCount.textContent = teams.length;
-
-      if (teams.length === 0) {
-        teamsList.innerHTML = '<div class="empty-sub-note">No teams registered yet.</div>'; return;
-      }
-
-      teamsList.innerHTML = teams.map(t => `
-        <div class="team-card ${t.eliminated ? "eliminated" : ""}">
-          <div class="team-card-top">
-            <div class="team-card-name">
-              ${t.eliminated ? "☠ " : "🔍 "}<strong>${escHtml(t.name)}</strong>
-              ${t.eliminated ? '<span class="elim-tag">ELIMINATED</span>' : '<span class="active-tag">ACTIVE</span>'}
+          <header className="admin-header">
+            <div className="header-left">
+              <span className="logo-sm">SHER LOCKED</span>
+              <span className="header-sep">|</span>
+              <span className="admin-badge">⚙ INSPECTOR'S CONTROL ROOM</span>
             </div>
-            <button class="admin-btn small ${t.eliminated ? "pink" : "grey"} elim-btn"
-              data-id="${t.id}" data-elim="${t.eliminated}">
-              ${t.eliminated ? "REINSTATE" : "ELIMINATE"}
-            </button>
+            <div className="header-right">
+              <span className="live-indicator"></span>
+              <span>{teams.length} team{teams.length !== 1 ? "s" : ""}</span>
+              <button 
+                disabled={resetting}
+                onClick={handleReset}
+                style={{
+                  background:'none', border:'1px solid rgba(139,26,26,0.6)', color: resetting ? '#7acc7a' : 'rgba(242,232,213,0.7)',
+                  fontFamily:'var(--font-type)', fontSize:'0.58rem', letterSpacing:'0.12em', padding:'0.3rem 0.8rem', cursor:'pointer'
+                }}
+              >
+                {resetting ? "RESETTING..." : "⚠ RESET GAME"}
+              </button>
+            </div>
+          </header>
+
+          <div className="admin-tabs">
+            <button className={`admin-tab ${activeTab === 'clues' ? 'active' : ''}`} onClick={() => setActiveTab('clues')}>📁 CLUES</button>
+            <button className={`admin-tab ${activeTab === 'teams' ? 'active' : ''}`} onClick={() => setActiveTab('teams')}>👥 TEAMS</button>
+            <button className={`admin-tab ${activeTab === 'rounds' ? 'active' : ''}`} onClick={() => setActiveTab('rounds')}>🔐 ROUNDS</button>
           </div>
-          <div class="team-card-members">
-            ${(t.members || []).map(m => `<span class="member-chip">👤 ${escHtml(m)}</span>`).join("")}
-            ${(!t.members || t.members.length === 0) ? '<span style="color:var(--ink-faint);font-size:0.7rem;font-style:italic">No members listed</span>' : ""}
-          </div>
-          <div class="team-card-time">Registered: ${t.joinedAt?.toDate ? t.joinedAt.toDate().toLocaleString() : "—"}</div>
-        </div>
-      `).join("");
 
-      teamsList.querySelectorAll(".elim-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const elim = btn.dataset.elim === "true";
-          const action = elim ? "reinstate" : "eliminate";
-          if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this team?`)) return;
-          await updateDoc(doc(db, "teams", btn.dataset.id), { eliminated: !elim });
-        });
-      });
-    });
+          {activeTab === 'clues' && (
+            <div className="admin-tab-content active">
+              <div className="admin-layout">
+                <div className="admin-left">
+                  <div className="admin-card">
+                    <div className="admin-card-title">＋ NEW CLUE</div>
+                    <label className="field-label">TITLE</label>
+                    <input type="text" className="admin-input" placeholder="e.g. Suspect's Diary Entry" value={clueTitle} onChange={e=>setClueTitle(e.target.value)} />
 
-    // ── ROUND CONTROLS ──
-    const rcList = document.getElementById("roundControlsList");
+                    <label className="field-label" style={{marginTop:'0.8rem'}}>DESCRIPTION</label>
+                    <textarea className="admin-textarea" rows="4" placeholder="Describe the clue..." value={clueDesc} onChange={e=>setClueDesc(e.target.value)}></textarea>
 
-    async function renderRoundControls() {
-      rcList.innerHTML = "";
-      for (const r of [1,2,3,4,5]) {
-        const snap = await getDoc(doc(db, "rounds", String(r)));
-        const locked = snap.exists() ? snap.data().locked : false;
-        const row = document.createElement("div");
-        row.className = "round-row-ctrl";
-        row.innerHTML = `
-          <span class="round-label">ROUND ${r}</span>
-          <span class="lock-status ${locked ? "locked" : "unlocked"}">${locked ? "🔒 LOCKED" : "🔓 OPEN"}</span>
-          <button class="admin-btn small ${locked ? "pink" : "grey"} lock-btn" data-round="${r}" data-locked="${locked}">
-            ${locked ? "UNLOCK" : "LOCK"}
-          </button>
-        `;
-        rcList.appendChild(row);
-      }
-      rcList.querySelectorAll(".lock-btn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const locked = btn.dataset.locked === "true";
-          await setDoc(doc(db, "rounds", btn.dataset.round), { locked: !locked });
-          renderRoundControls();
-        });
-      });
+                    <div className="two-col" style={{marginTop:'0.8rem'}}>
+                      <div>
+                        <label className="field-label">ROUND</label>
+                        <select className="round-select" value={clueRound} onChange={e=>setClueRound(e.target.value)}>
+                          <option>1</option><option>2</option><option>3</option>
+                          <option>4</option><option>5</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="field-label">IMAGE / AUDIO <span style={{color:'var(--ink-faint)',fontSize:'0.55rem'}}>(free upload)</span></label>
+                        <input type="file" ref={fileInputRef} className="admin-file" accept="image/*,audio/*" style={{marginTop:'0.3rem'}} onChange={e=>setClueFile(e.target.files[0])} />
+                        {uploading && <div style={{marginTop:'0.4rem',fontFamily:'var(--font-type)',fontSize:'0.6rem',color:'var(--ink-faint)'}}>⏳ Uploading...</div>}
+                      </div>
+                    </div>
+
+                    <button className="admin-btn pink" style={{marginTop:'1rem'}} onClick={handleAddClue} disabled={saving}>
+                      {saving ? (uploading ? "UPLOADING..." : "SAVING...") : "SAVE CLUE (DRAFT)"}
+                    </button>
+                    {msg && <div className={`submit-msg ${msgType}`}>{msg}</div>}
+                  </div>
+                </div>
+
+                <div className="admin-center">
+                  <div className="section-title">
+                    <span className="section-icon">📁</span> ALL CLUES
+                    <span className="clue-count">{clues.length}</span>
+                  </div>
+                  <div className="admin-clue-list">
+                    {clues.length === 0 ? (
+                      <div className="empty-state">
+                        <div className="empty-icon">📋</div>
+                        <div>No clues yet.</div>
+                      </div>
+                    ) : (
+                      clues.map(clue => (
+                        <div className={`admin-clue-item ${clue.released ? "released" : ""}`} key={clue.id}>
+                          <div className="admin-clue-top">
+                            <span className="clue-round-tag">R{clue.round}</span>
+                            <span className="admin-clue-title">{clue.title}</span>
+                            <span className={`release-badge ${clue.released ? "live" : "draft"}`}>{clue.released ? "● LIVE" : "○ DRAFT"}</span>
+                          </div>
+                          <div className="admin-clue-desc">{clue.description}</div>
+                          <div className="admin-clue-actions">
+                            <button className={`admin-btn ${clue.released ? "grey" : "pink"} small`} onClick={() => handleReleaseClue(clue.id, clue.released)}>
+                              {clue.released ? "RETRACT" : "RELEASE NOW"}
+                            </button>
+                            <button className="admin-btn grey small delete-btn" onClick={() => handleDeleteClue(clue.id)}>DELETE</button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'teams' && (
+            <div className="admin-tab-content active">
+              <div className="teams-panel">
+                <div className="section-title">
+                  <span className="section-icon">👥</span> REGISTERED TEAMS
+                  <span className="clue-count">{teams.length}</span>
+                </div>
+                <div className="teams-list">
+                  {teams.length === 0 ? (
+                    <div className="empty-sub-note">No teams registered yet.</div>
+                  ) : (
+                    teams.map(t => (
+                      <div className={`team-card ${t.eliminated ? "eliminated" : ""}`} key={t.id}>
+                        <div className="team-card-top">
+                          <div className="team-card-name">
+                            {t.eliminated ? "☠ " : "🔍 "}<strong>{t.name}</strong>
+                            {t.eliminated ? <span className="elim-tag">ELIMINATED</span> : <span className="active-tag">ACTIVE</span>}
+                          </div>
+                          <button className={`admin-btn small ${t.eliminated ? "pink" : "grey"}`} onClick={() => handleEliminateTeam(t.id, t.eliminated)}>
+                            {t.eliminated ? "REINSTATE" : "ELIMINATE"}
+                          </button>
+                        </div>
+                        <div className="team-card-members">
+                          {(t.members || []).map((m, i) => <span className="member-chip" key={i}>👤 {m}</span>)}
+                          {(!t.members || t.members.length === 0) && <span style={{color:'var(--ink-faint)',fontSize:'0.7rem',fontStyle:'italic'}}>No members listed</span>}
+                        </div>
+                        <div className="team-card-time">Registered: {t.joinedAt ? new Date(t.joinedAt).toLocaleString() : "—"}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'rounds' && (
+            <div className="admin-tab-content active">
+              <div className="rounds-panel">
+                <div className="section-title">
+                  <span className="section-icon">🔐</span> ROUND CONTROLS
+                </div>
+                <div className="round-controls-list">
+                  {[1,2,3,4,5].map(r => (
+                    <div className="round-row-ctrl" key={r}>
+                      <span className="round-label">ROUND {r}</span>
+                      <span className={`lock-status ${rounds[r] ? "locked" : "unlocked"}`}>{rounds[r] ? "🔒 LOCKED" : "🔓 OPEN"}</span>
+                      <button className={`admin-btn small ${rounds[r] ? "pink" : "grey"}`} onClick={() => handleToggleRound(r, rounds[r])}>
+                        {rounds[r] ? "UNLOCK" : "LOCK"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+        </React.Fragment>
+      );
     }
-    renderRoundControls();
 
-    function escHtml(s) {
-      return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    }
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>

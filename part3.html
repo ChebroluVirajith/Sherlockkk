@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SHER LOCKED AGAIN?! — Part 3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/old-london" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="db.js"></script>
+</head>
+<body class="feed-page">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [teamName, setTeamName] = useState(null);
+      const [members, setMembers] = useState([]);
+      const [eliminated, setEliminated] = useState(false);
+      const [clues, setClues] = useState([]);
+      const [modals, setModals] = useState({});
+      const [showContinue, setShowContinue] = useState({});
+      const [passwords, setPasswords] = useState({});
+      const [errors, setErrors] = useState({});
+
+      useEffect(() => {
+        const tName = localStorage.getItem("noir_team");
+        if (!tName) {
+          window.location.href = "index.html";
+          return;
+        }
+        setTeamName(tName);
+        setMembers(JSON.parse(localStorage.getItem("noir_members") || "[]"));
+
+        const updateStateFromDB = (db) => {
+          const team = db.teams.find(t => t.name.toLowerCase() === tName.toLowerCase());
+          if (team) {
+            setEliminated(team.eliminated);
+          }
+          const activeClues = db.clues.filter(c => c.released && c.round === 3).sort((a,b) => new Date(a.releasedAt) - new Date(b.releasedAt));
+          setClues(activeClues);
+        };
+
+        const db = window.getDB();
+        updateStateFromDB(db);
+
+        const unsubscribe = window.subscribeDB(updateStateFromDB);
+        return () => unsubscribe();
+      }, []);
+
+      const handleLogout = () => {
+        if (confirm("Leave game?")) {
+          localStorage.removeItem("noir_team");
+          localStorage.removeItem("noir_members");
+          window.location.href = "index.html";
+        }
+      };
+
+      const handleAudioEnded = (id) => {
+        setModals(prev => ({ ...prev, [id]: true }));
+        setTimeout(() => {
+          setShowContinue(prev => ({ ...prev, [id]: true }));
+        }, 60000);
+      };
+
+      const closeModal = (id) => {
+        setModals(prev => ({ ...prev, [id]: false }));
+      };
+
+      const handleContinue = () => {
+        window.location.href = "part2.html";
+      };
+
+      if (!teamName) return null;
+
+      return (
+        <React.Fragment>
+          <div className="paper-texture"></div>
+          <div className="vignette"></div>
+
+          <header className="feed-header">
+            <div className="header-left">
+              <span className="logo-sm">SHER LOCKED</span>
+              <span className="header-sep">|</span>
+              <span className="live-indicator"></span>
+              <span id="roundLabel">PART 3</span>
+            </div>
+            <div className="header-right">
+              <span className="team-badge">UNIT: {teamName}</span>
+              <button className="logout-btn" title="Leave game" onClick={handleLogout}>✕</button>
+            </div>
+          </header>
+
+          <div className="feed-layout-full">
+            <main className="clues-col-full">
+              <div className="section-title">
+                <span className="section-icon">📁</span> PART 3 FILES
+                <span className="clue-count">{clues.length} CLUE{clues.length !== 1 ? 'S' : ''}</span>
+              </div>
+
+              <div className="team-info-bar">
+                <span className="team-info-label">YOUR UNIT:</span>
+                <span>{teamName}</span>
+                <span className="team-info-sep">·</span>
+                <span className="team-info-label">MEMBERS:</span>
+                <span>{members.length ? members.join(", ") : "—"}</span>
+              </div>
+
+              {eliminated && (
+                <div className="eliminated-banner">
+                  ☠ YOUR TEAM HAS BEEN ELIMINATED BY THE INSPECTOR
+                </div>
+              )}
+
+              <div className="clues-feed">
+                {clues.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">🔍</div>
+                    <div>Awaiting first transmission...</div>
+                    <div className="empty-sub">Stand by. The detective is building the case.</div>
+                  </div>
+                ) : (
+                  clues.map(clue => (
+                  <div className="clue-card" key={clue.id}>
+                    <div className="clue-meta">
+                      <span className="clue-round-tag">ROUND {clue.round || "?"}</span>
+                      <span className="clue-time">
+                        {clue.releasedAt ? new Date(clue.releasedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : "—"}
+                      </span>
+                    </div>
+                    <div className="clue-title">{clue.title}</div>
+                    <div className="clue-desc">{clue.description}</div>
+                    {clue.mediaUrl && (
+                      clue.mediaType === "audio" ? (
+                        <React.Fragment>
+                          <audio className="clue-audio" controls src={clue.mediaUrl} onEnded={() => handleAudioEnded(clue.id)}></audio>
+                          {modals[clue.id] && (
+                            <div className="evidence-modal">
+                              <button onClick={() => closeModal(clue.id)} className="evidence-modal-close">✕</button>
+                              <div className="evidence-modal-gallery">
+                                <img src="foot.png" alt="Footprint Evidence" />
+                                <img src="finger.png" alt="Fingerprint Evidence" />
+                              </div>
+                              <div className="evidence-modal-title">⚠ NEW EVIDENCE UNCOVERED ⚠</div>
+                              {showContinue[clue.id] && (
+                                <button onClick={handleContinue} className="enter-btn" style={{maxWidth: '400px', marginTop: '2rem'}}>
+                                  CONTINUE THE INVESTIGATION &rarr;
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </React.Fragment>
+                      ) : (
+                        <React.Fragment>
+                          <img className="clue-img" src={clue.mediaUrl} alt="Evidence" loading="lazy" />
+                          {clue.title === "Can You Solve It?" && (
+                            <div style={{marginTop: '1.5rem', padding: '1.5rem', background: 'var(--paper)', border: '1px solid var(--rule-light)', textAlign: 'center'}}>
+                              <div style={{marginBottom: '1rem', fontFamily: 'var(--font-type)', color: 'var(--ink-mid)'}}>ENTER DECRYPTED PASSCODE</div>
+                              {!showContinue[clue.id] ? (
+                                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'}}>
+                                  <div style={{display: 'flex', gap: '0.5rem', justifyContent: 'center'}}>
+                                    <input 
+                                      type="text" 
+                                      className="answer-input" 
+                                      placeholder="Passcode..." 
+                                      value={passwords[clue.id] || ''}
+                                      onChange={(e) => setPasswords(prev => ({...prev, [clue.id]: e.target.value}))}
+                                      style={{maxWidth: '200px'}} 
+                                    />
+                                    <button 
+                                      className="submit-btn" 
+                                      style={{minHeight: '40px', padding: '0 1.5rem', fontSize: '0.8rem'}}
+                                      onClick={() => {
+                                        const val = (passwords[clue.id] || "").toUpperCase().trim();
+                                        if (val === "MORALITY") {
+                                          setShowContinue(prev => ({ ...prev, [clue.id]: true }));
+                                          setErrors(prev => ({ ...prev, [clue.id]: "" }));
+                                        } else {
+                                          setErrors(prev => ({ ...prev, [clue.id]: "INCORRECT PASSCODE. TRY AGAIN." }));
+                                        }
+                                      }}>
+                                      VERIFY
+                                    </button>
+                                  </div>
+                                  {errors[clue.id] && <div className="error-msg" style={{display: 'block'}}>{errors[clue.id]}</div>}
+                                </div>
+                              ) : (
+                                <button className="enter-btn" onClick={() => window.location.href="part3.html"} style={{maxWidth: '350px', margin: '0 auto'}}>CONTINUE THE INVESTIGATION &rarr;</button>
+                              )}
+                            </div>
+                          )}
+                        </React.Fragment>
+                      )
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            </main>
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
