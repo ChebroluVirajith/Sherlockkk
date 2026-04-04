@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SHER LOCKED AGAIN?! — Case Feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/old-london" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="feed-page">
+
+  <div class="paper-texture"></div>
+  <div class="vignette"></div>
+
+  <header class="feed-header">
+    <div class="header-left">
+      <span class="logo-sm">SHER LOCKED</span>
+      <span class="header-sep">|</span>
+      <span class="live-indicator"></span>
+      <span id="roundLabel">LIVE</span>
+    </div>
+    <div class="header-right">
+      <span class="team-badge" id="teamBadge">UNIT: —</span>
+      <button class="logout-btn" id="logoutBtn" title="Leave game">✕</button>
+    </div>
+  </header>
+
+  <div class="feed-layout-full">
+
+    <main class="clues-col-full">
+      <div class="section-title">
+        <span class="section-icon">📁</span> CASE FILES
+        <span class="clue-count" id="clueCount">0 CLUES</span>
+      </div>
+
+      <!-- Team info bar -->
+      <div class="team-info-bar" id="teamInfoBar" style="display:none">
+        <span class="team-info-label">YOUR UNIT:</span>
+        <span id="teamInfoName"></span>
+        <span class="team-info-sep">·</span>
+        <span class="team-info-label">MEMBERS:</span>
+        <span id="teamInfoMembers"></span>
+      </div>
+
+      <!-- Eliminated banner -->
+      <div class="eliminated-banner hidden" id="eliminatedBanner">
+        ☠ YOUR TEAM HAS BEEN ELIMINATED BY THE INSPECTOR
+      </div>
+
+      <div id="cluesFeed" class="clues-feed">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🔍</div>
+          <div>Awaiting first transmission...</div>
+          <div class="empty-sub">Stand by. The detective is building the case.</div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore, collection, query, where, orderBy,
+      onSnapshot, doc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { firebaseConfig } from "./firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    const teamName = localStorage.getItem("noir_team");
+    if (!teamName) { window.location.href = "index.html"; throw new Error("No team"); }
+
+    const members = JSON.parse(localStorage.getItem("noir_members") || "[]");
+
+    document.getElementById("teamBadge").textContent = `UNIT: ${teamName}`;
+
+    // Show team info bar
+    if (teamName || members.length) {
+      const bar = document.getElementById("teamInfoBar");
+      bar.style.display = "flex";
+      document.getElementById("teamInfoName").textContent = teamName;
+      document.getElementById("teamInfoMembers").textContent = members.length ? members.join(", ") : "—";
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      if (confirm("Leave game?")) {
+        localStorage.removeItem("noir_team");
+        localStorage.removeItem("noir_members");
+        window.location.href = "index.html";
+      }
+    });
+
+    // Watch for elimination
+    const teamsQ = query(collection(db, "teams"), where("name", "==", teamName));
+    onSnapshot(teamsQ, snap => {
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        if (data.eliminated) {
+          document.getElementById("eliminatedBanner").classList.remove("hidden");
+        } else {
+          document.getElementById("eliminatedBanner").classList.add("hidden");
+        }
+      }
+    });
+
+    // Real-time clues
+    const cluesFeed  = document.getElementById("cluesFeed");
+    const emptyState = document.getElementById("emptyState");
+    const clueCount  = document.getElementById("clueCount");
+
+    const cluesQ = query(
+      collection(db, "clues"),
+      where("released", "==", true),
+      orderBy("releasedAt", "asc")
+    );
+
+    onSnapshot(cluesQ, snap => {
+      const clues = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      clueCount.textContent = `${clues.length} CLUE${clues.length !== 1 ? "S" : ""}`;
+
+      cluesFeed.querySelectorAll(".clue-card").forEach(c => c.remove());
+
+      if (clues.length === 0) {
+        emptyState.style.display = "flex"; return;
+      }
+      emptyState.style.display = "none";
+
+      clues.forEach(clue => cluesFeed.appendChild(buildClueCard(clue)));
+    });
+
+    function buildClueCard(clue) {
+      const card = document.createElement("div");
+      card.className = "clue-card";
+      const ts = clue.releasedAt?.toDate
+        ? clue.releasedAt.toDate().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+        : "—";
+      card.innerHTML = `
+        <div class="clue-meta">
+          <span class="clue-round-tag">ROUND ${clue.round || "?"}</span>
+          <span class="clue-time">${ts}</span>
+        </div>
+        <div class="clue-title">${escHtml(clue.title)}</div>
+        <div class="clue-desc">${escHtml(clue.description)}</div>
+        ${clue.mediaUrl ? (clue.mediaType === "audio"
+          ? `<audio class="clue-audio" controls src="${clue.mediaUrl}"></audio>`
+          : `<img class="clue-img" src="${clue.mediaUrl}" alt="Evidence" loading="lazy"/>`)
+        : ""}
+      `;
+      return card;
+    }
+
+    function escHtml(s) {
+      return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+  </script>
+</body>
+</html>

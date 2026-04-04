@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SHER LOCKED AGAIN?! — Live Detective Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/old-london" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="entry-page">
+
+  <div class="paper-texture"></div>
+  <div class="vignette"></div>
+
+  <div class="entry-container">
+
+    <div class="newspaper-header">
+      <div class="paper-rule thick"></div>
+      <div class="masthead-row">
+        <div class="masthead-left">
+          <div class="edition-text">MORNING EDITION</div>
+          <div class="edition-text">VOL. CLXII . No. 47</div>
+        </div>
+        <div class="masthead-center">
+          <div class="paper-name">The Baker Street</div>
+          <div class="paper-sub">INTELLIGENCE GAZETTE</div>
+        </div>
+        <div class="masthead-right">
+          <div class="edition-text">APRIL 8, 2026</div>
+          <div class="edition-text">PRICE: YOUR WITS</div>
+        </div>
+      </div>
+      <div class="paper-rule thick"></div>
+      <div class="paper-rule thin"></div>
+    </div>
+
+    <div class="headline-block">
+      <div class="headline-kicker">◆ BREAKING CASE ◆</div>
+      <div class="headline-main">SHER LOCKED</div>
+      <div class="headline-again">AGAIN?!</div>
+      <div class="headline-deck">A Timeless Hunt Begins — Detectives Summoned to Solve the Unsolvable</div>
+    </div>
+
+    <div class="paper-rule thin"></div>
+
+    <div class="entry-columns">
+      <div class="entry-story">
+        <p><span class="drop-cap">I</span>t has come to the attention of this gazette that a most perplexing crime has been committed in the heart of the city. Scotland Yard is baffled. The streets are nervous. Only the sharpest of minds may untangle the web of deception laid before us.</p>
+        <p>Assemble your unit. Study the clues. The clock is ticking.</p>
+        <div class="wanted-box">
+          <div class="wanted-title">ATTENTION, DETECTIVE</div>
+          <div class="wanted-sub">Register your investigative unit to gain access to classified case files.</div>
+        </div>
+      </div>
+
+      <div class="entry-form-col">
+
+        <!-- STEP 1: Team Name -->
+        <div class="entry-card" id="step1">
+          <div class="card-header">
+            <span class="live-indicator"></span>
+            STEP 1 — UNIT IDENTIFICATION
+          </div>
+          <div class="card-body">
+            <label class="field-label" for="teamName">TEAM CODENAME</label>
+            <input type="text" id="teamName" class="team-input" placeholder="Enter your team name..." maxlength="30" autocomplete="off"/>
+            <div id="errorMsg" class="error-msg hidden">⚠ That codename is already taken. Choose another.</div>
+            <button id="step1Btn" class="enter-btn">
+              <span id="btn1Text">NEXT — ADD MEMBERS →</span>
+              <span id="btn1Loader" class="hidden">CHECKING...</span>
+            </button>
+          </div>
+          <div class="card-footer">All transmissions are recorded by the Gazette.</div>
+        </div>
+
+        <!-- STEP 2: Member Names -->
+        <div class="entry-card hidden" id="step2">
+          <div class="card-header">
+            <span class="live-indicator"></span>
+            STEP 2 — REGISTER MEMBERS
+            <button id="backBtn" style="margin-left:auto;background:none;border:1px solid rgba(242,232,213,0.3);color:rgba(242,232,213,0.6);font-family:var(--font-type);font-size:0.58rem;letter-spacing:0.1em;padding:0.2rem 0.6rem;cursor:pointer;">← BACK</button>
+          </div>
+          <div class="card-body">
+            <div class="team-name-display" id="teamNameDisplay"></div>
+            <label class="field-label">MEMBER NAMES <span style="color:var(--ink-faint)">(add up to 6)</span></label>
+            <div id="membersList" class="members-list"></div>
+            <div class="member-add-row">
+              <input type="text" id="memberInput" class="team-input" placeholder="Member name..." maxlength="30" autocomplete="off"/>
+              <button id="addMemberBtn" class="add-member-btn">＋</button>
+            </div>
+            <div id="memberError" class="error-msg hidden">⚠ Enter a name first.</div>
+            <button id="step2Btn" class="enter-btn" style="margin-top:0.75rem">
+              <span id="btn2Text">ENTER THE INVESTIGATION →</span>
+              <span id="btn2Loader" class="hidden">REGISTERING...</span>
+            </button>
+          </div>
+          <div class="card-footer">You can add up to 6 members per team.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="paper-rule thin"></div>
+    <div class="bottom-note">
+      INSPECTOR? <a href="admin.html" class="admin-link">→ Enter Control Room</a>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { firebaseConfig } from "./firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // If already registered, go to feed
+    if (localStorage.getItem("noir_team")) window.location.href = "feed.html";
+
+    let teamName = "";
+    let members  = [];
+
+    // ── STEP 1 ──
+    const step1Btn  = document.getElementById("step1Btn");
+    const btn1Text  = document.getElementById("btn1Text");
+    const btn1Loader= document.getElementById("btn1Loader");
+    const errorMsg  = document.getElementById("errorMsg");
+    const teamInput = document.getElementById("teamName");
+
+    document.getElementById("backBtn").addEventListener("click", () => {
+      document.getElementById("step2").classList.add("hidden");
+      document.getElementById("step1").classList.remove("hidden");
+      members = [];
+      renderMembers();
+      teamInput.value = teamName;
+      errorMsg.classList.add("hidden");
+    });
+
+    step1Btn.addEventListener("click", async () => {
+      const name = teamInput.value.trim();
+      if (!name) { teamInput.focus(); return; }
+
+      errorMsg.classList.add("hidden");
+      btn1Text.classList.add("hidden");
+      btn1Loader.classList.remove("hidden");
+      step1Btn.disabled = true;
+
+      try {
+        const q = query(collection(db, "teams"), where("name", "==", name));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          errorMsg.classList.remove("hidden");
+          btn1Text.classList.remove("hidden");
+          btn1Loader.classList.add("hidden");
+          step1Btn.disabled = false;
+          return;
+        }
+        teamName = name;
+        document.getElementById("teamNameDisplay").textContent = `Team: ${name}`;
+        document.getElementById("step1").classList.add("hidden");
+        document.getElementById("step2").classList.remove("hidden");
+      } catch(e) {
+        errorMsg.textContent = "⚠ Connection error.";
+        errorMsg.classList.remove("hidden");
+        btn1Text.classList.remove("hidden");
+        btn1Loader.classList.add("hidden");
+        step1Btn.disabled = false;
+      }
+    });
+    teamInput.addEventListener("keydown", e => { if (e.key === "Enter") step1Btn.click(); });
+
+    // ── STEP 2 ──
+    const memberInput  = document.getElementById("memberInput");
+    const membersList  = document.getElementById("membersList");
+    const addMemberBtn = document.getElementById("addMemberBtn");
+    const memberError  = document.getElementById("memberError");
+
+    function renderMembers() {
+      membersList.innerHTML = members.map((m, i) => `
+        <div class="member-tag">
+          <span>👤 ${escHtml(m)}</span>
+          <button class="remove-member" data-i="${i}">✕</button>
+        </div>
+      `).join("");
+      membersList.querySelectorAll(".remove-member").forEach(btn => {
+        btn.addEventListener("click", () => {
+          members.splice(parseInt(btn.dataset.i), 1);
+          renderMembers();
+        });
+      });
+    }
+
+    addMemberBtn.addEventListener("click", () => {
+      const name = memberInput.value.trim();
+      memberError.classList.add("hidden");
+      if (!name) { memberError.classList.remove("hidden"); return; }
+      if (members.length >= 6) { memberError.textContent = "⚠ Max 6 members."; memberError.classList.remove("hidden"); return; }
+      members.push(name);
+      memberInput.value = "";
+      renderMembers();
+    });
+    memberInput.addEventListener("keydown", e => { if (e.key === "Enter") addMemberBtn.click(); });
+
+    const step2Btn  = document.getElementById("step2Btn");
+    const btn2Text  = document.getElementById("btn2Text");
+    const btn2Loader= document.getElementById("btn2Loader");
+
+    step2Btn.addEventListener("click", async () => {
+      if (members.length === 0) {
+        memberError.textContent = "⚠ Add at least one member.";
+        memberError.classList.remove("hidden"); return;
+      }
+      btn2Text.classList.add("hidden");
+      btn2Loader.classList.remove("hidden");
+      step2Btn.disabled = true;
+
+      try {
+        await addDoc(collection(db, "teams"), {
+          name: teamName,
+          members,
+          eliminated: false,
+          joinedAt: serverTimestamp()
+        });
+        localStorage.setItem("noir_team", teamName);
+        localStorage.setItem("noir_members", JSON.stringify(members));
+        window.location.href = "feed.html";
+      } catch(e) {
+        memberError.textContent = "⚠ Registration failed: " + e.message;
+        memberError.classList.remove("hidden");
+        btn2Text.classList.remove("hidden");
+        btn2Loader.classList.add("hidden");
+        step2Btn.disabled = false;
+      }
+    });
+
+    function escHtml(s) {
+      return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+  </script>
+</body>
+</html>
