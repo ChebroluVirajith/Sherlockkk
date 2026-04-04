@@ -11,42 +11,61 @@ window.getDB = function() {
 
   if (!parsed.clues) parsed.clues = [];
 
-  const addClueIfMissing = (round, payload) => {
-    if (!parsed.clues.some(c => c.round === round)) {
-      parsed.clues.push({
+  const syncDefaultClueByTitle = (title, round, payload) => {
+    let existing = parsed.clues.find(c => c.title === title);
+    let changed = false;
+    
+    if (!existing) {
+      existing = {
         id: window.generateId(),
         round,
-        ...payload,
+        title,
         released: true,
         createdAt: new Date().toISOString(),
         releasedAt: new Date().toISOString()
-      });
-      return true;
+      };
+      parsed.clues.push(existing);
+      changed = true;
     }
-    return false;
+    
+    if (existing.round !== round) {
+      existing.round = round;
+      changed = true;
+    }
+    
+    for (let key in payload) {
+      if (existing[key] !== payload[key]) {
+        existing[key] = payload[key];
+        changed = true;
+      }
+    }
+    return changed;
   };
 
   let updated = false;
 
-  if (addClueIfMissing(1, {
-    title: "Intercepted Transmission",
+  if (syncDefaultClueByTitle("Intercepted Transmission", 1, {
     description: "An audio file intercepted from the secure channel.",
     mediaUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
     mediaType: "audio"
   })) updated = true;
 
-  if (addClueIfMissing(2, {
-    title: "Can You Solve It?",
+  if (syncDefaultClueByTitle("Can You Solve It?", 2, {
     description: "A complex word search puzzle was recovered from the suspect's study. Search carefully for hidden clues to unlock the next piece of evidence.",
     mediaUrl: "puzzle.jpg",
     mediaType: "image"
   })) updated = true;
 
-  if (addClueIfMissing(3, {
-    title: "The Final Confrontation",
-    description: "Our suspect has fled to the docks. Review the map detailing their known escape routes before time runs out.",
-    mediaUrl: "https://images.unsplash.com/photo-1582299863261-000a6e87d468",
-    mediaType: "image"
+  if (syncDefaultClueByTitle("PIRATE QUEST", 3, {
+    description: "A mysterious document outlining a pirate quest has been discovered. Download the case file to investigate further.",
+    mediaUrl: "PIRATE QUEST.docx",
+    mediaType: "document"
+  })) updated = true;
+
+  if (syncDefaultClueByTitle("Classified Testimony", 3, {
+    description: "A secondary document has arrived in your feed. Review the Girivarun files for extra context.",
+    mediaUrl: "girivarun.docx",
+    mediaType: "document"
   })) updated = true;
 
   if (updated) {
