@@ -1,12 +1,12 @@
 const DB_KEY = "sherlocked_db";
 
-window.getDB = function() {
+window.getDB = function () {
   const data = localStorage.getItem(DB_KEY);
-  let parsed = { teams: [], clues: [], rounds: {1: false, 2: false, 3: false, 4: false, 5: false} };
+  let parsed = { teams: [], clues: [], rounds: { 1: false, 2: false, 3: false, 4: false, 5: false } };
   if (data) {
     try {
       parsed = JSON.parse(data);
-    } catch(e) {}
+    } catch (e) { }
   }
 
   if (!parsed.clues) parsed.clues = [];
@@ -14,7 +14,7 @@ window.getDB = function() {
   const syncDefaultClueByTitle = (title, round, payload) => {
     let existing = parsed.clues.find(c => c.title === title);
     let changed = false;
-    
+
     if (!existing) {
       existing = {
         id: window.generateId(),
@@ -27,12 +27,12 @@ window.getDB = function() {
       parsed.clues.push(existing);
       changed = true;
     }
-    
+
     if (existing.round !== round) {
       existing.round = round;
       changed = true;
     }
-    
+
     for (let key in payload) {
       if (existing[key] !== payload[key]) {
         existing[key] = payload[key];
@@ -52,27 +52,36 @@ window.getDB = function() {
 
   if (syncDefaultClueByTitle("Can You Solve It?", 2, {
     description: "A complex word search puzzle was recovered from the suspect's study. Search carefully for hidden clues to unlock the next piece of evidence.",
-    mediaUrl: "puzzle.jpg",
+    mediaUrl: "jigsaw.jpeg",
     mediaType: "image"
   })) updated = true;
 
-  if (syncDefaultClueByTitle("PIRATE QUEST", 3, {
-    description: "A mysterious document outlining a pirate quest has been discovered. Download the case file to investigate further.",
-    mediaUrl: "PIRATE QUEST.docx",
+  if (syncDefaultClueByTitle("Case File 1", 3, {
+    description: "A mysterious document has been discovered. Download the case file to investigate further.",
+    mediaUrl: "Case file 1.pdf",
     mediaType: "document"
   })) updated = true;
 
-  if (syncDefaultClueByTitle("Classified Testimony", 3, {
-    description: "A secondary document has arrived in your feed. Review the Girivarun files for extra context.",
-    mediaUrl: "girivarun.docx",
+  if (syncDefaultClueByTitle("Case File 2", 3, {
+    description: "A secondary document has arrived in your feed. Review the Case files for extra context.",
+    mediaUrl: "Case file 2.pdf",
     mediaType: "document"
   })) updated = true;
 
   if (syncDefaultClueByTitle("Investigation Hint 1", 4, {
     description: "A mysterious image has been uncovered. Examine it closely.",
     mediaUrl: "Hint1.jpeg",
-    mediaType: "image"
+    mediaType: "image",
+    released: true
   })) updated = true;
+
+  const oldTitles = ["PIRATE QUEST", "Classified Testimony"];
+  let cleanupChanged = false;
+  oldTitles.forEach(title => {
+    const idx = parsed.clues.findIndex(c => c.title === title);
+    if (idx !== -1) { parsed.clues.splice(idx, 1); cleanupChanged = true; }
+  });
+  if (cleanupChanged) updated = true;
 
   if (syncDefaultClueByTitle("Investigation Hint 2", 5, {
     description: "Another mysterious image has been uncovered. Examine it carefully.",
@@ -101,16 +110,16 @@ window.getDB = function() {
   if (updated) {
     localStorage.setItem(DB_KEY, JSON.stringify(parsed));
   }
-  
+
   return parsed;
 };
 
-window.saveDB = function(data) {
+window.saveDB = function (data) {
   localStorage.setItem(DB_KEY, JSON.stringify(data));
   window.dispatchEvent(new Event('localDBUpdated'));
 };
 
-window.subscribeDB = function(callback) {
+window.subscribeDB = function (callback) {
   const handler = () => callback(window.getDB());
   window.addEventListener('storage', handler);
   window.addEventListener('localDBUpdated', handler);
@@ -120,6 +129,6 @@ window.subscribeDB = function(callback) {
   };
 };
 
-window.generateId = function() {
+window.generateId = function () {
   return Math.random().toString(36).substring(2, 9);
 };

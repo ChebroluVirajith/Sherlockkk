@@ -64,9 +64,6 @@
 
       const handleAudioEnded = (id) => {
         setModals(prev => ({ ...prev, [id]: true }));
-        setTimeout(() => {
-          setShowContinue(prev => ({ ...prev, [id]: true }));
-        }, 60000);
       };
 
       const closeModal = (id) => {
@@ -144,11 +141,48 @@
                             <div className="evidence-modal">
                               <button onClick={() => closeModal(clue.id)} className="evidence-modal-close">✕</button>
                               <div className="evidence-modal-gallery">
-                                <img src="foot.png" alt="Footprint Evidence" />
-                                <img src="finger.png" alt="Fingerprint Evidence" />
+                                <img src="post1.jpeg" alt="Post 1" />
+                                <img src="post2.jpeg" alt="Post 2" />
+                                <img src="post3.jpeg" alt="Post 3" />
+                                <img src="post4.jpeg" alt="Post 4" />
+                                <img src="post5.jpeg" alt="Post 5" />
+                                <img src="post6.jpeg" alt="Post 6" />
+                                <img src="post7.jpeg" alt="Post 7" />
+                                <img src="post8.jpeg" alt="Post 8" />
                               </div>
                               <div className="evidence-modal-title">⚠ NEW EVIDENCE UNCOVERED ⚠</div>
-                              {showContinue[clue.id] && (
+                              {!showContinue[clue.id] ? (
+                                <div style={{marginTop: '1.5rem', padding: '1.5rem', background: 'var(--paper)', border: '1px solid var(--rule-light)', textAlign: 'center'}}>
+                                  <div style={{marginBottom: '1rem', fontFamily: 'var(--font-type)', color: 'var(--ink-mid)'}}>ENTER DECRYPTED PASSCODE</div>
+                                  <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'}}>
+                                    <div style={{display: 'flex', gap: '0.5rem', justifyContent: 'center'}}>
+                                      <input 
+                                        type="text" 
+                                        className="answer-input" 
+                                        placeholder="Passcode..." 
+                                        value={passwords[clue.id] || ''}
+                                        onChange={(e) => setPasswords(prev => ({...prev, [clue.id]: e.target.value}))}
+                                        style={{maxWidth: '200px'}} 
+                                      />
+                                      <button 
+                                        className="submit-btn" 
+                                        style={{minHeight: '40px', padding: '0 1.5rem', fontSize: '0.8rem'}}
+                                        onClick={() => {
+                                          const val = (passwords[clue.id] || "").toUpperCase().trim();
+                                          if (val === "MORIARTY") {
+                                            setShowContinue(prev => ({ ...prev, [clue.id]: true }));
+                                            setErrors(prev => ({ ...prev, [clue.id]: "" }));
+                                          } else {
+                                            setErrors(prev => ({ ...prev, [clue.id]: "INCORRECT PASSCODE. TRY AGAIN." }));
+                                          }
+                                        }}>
+                                        VERIFY
+                                      </button>
+                                    </div>
+                                    {errors[clue.id] && <div className="error-msg" style={{display: 'block'}}>{errors[clue.id]}</div>}
+                                  </div>
+                                </div>
+                              ) : (
                                 <button onClick={handleContinue} className="enter-btn" style={{maxWidth: '400px', marginTop: '2rem'}}>
                                   CONTINUE THE INVESTIGATION &rarr;
                                 </button>
