@@ -46,7 +46,7 @@ window.getDB = function() {
 
   if (syncDefaultClueByTitle("Intercepted Transmission", 1, {
     description: "An audio file intercepted from the secure channel.",
-    mediaUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    mediaUrl: "Round1.mpeg",
     mediaType: "audio"
   })) updated = true;
 
