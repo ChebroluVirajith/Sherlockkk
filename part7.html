@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SHER LOCKED AGAIN?! — Part 3</title>
+  <title>SHER LOCKED AGAIN?! — Part 7</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
   <link href="https://fonts.cdnfonts.com/css/old-london" rel="stylesheet">
@@ -31,13 +31,6 @@
       const [showMurderNotification, setShowMurderNotification] = useState(false);
 
       useEffect(() => {
-        const timer = setTimeout(() => {
-          setShowMurderNotification(true);
-        }, 5000);
-        return () => clearTimeout(timer);
-      }, []);
-
-      useEffect(() => {
         const tName = localStorage.getItem("noir_team");
         if (!tName) {
           window.location.href = "index.html";
@@ -51,7 +44,7 @@
           if (team) {
             setEliminated(team.eliminated);
           }
-          const activeClues = db.clues.filter(c => c.released && c.round === 3).sort((a,b) => new Date(a.releasedAt) - new Date(b.releasedAt));
+          const activeClues = db.clues.filter(c => c.released && c.round === 7).sort((a,b) => new Date(a.releasedAt) - new Date(b.releasedAt));
           setClues(activeClues);
         };
 
@@ -82,7 +75,7 @@
       };
 
       const handleContinue = () => {
-        window.location.href = "part4.html";
+        window.location.href = "part8.html";
       };
 
       if (!teamName) return null;
@@ -97,7 +90,7 @@
               <span className="logo-sm">SHER LOCKED</span>
               <span className="header-sep">|</span>
               <span className="live-indicator"></span>
-              <span id="roundLabel">PART 3</span>
+              <span id="roundLabel">PART 7</span>
             </div>
             <div className="header-right">
               <span className="team-badge">UNIT: {teamName}</span>
@@ -108,7 +101,7 @@
           <div className="feed-layout-full">
             <main className="clues-col-full">
               <div className="section-title">
-                <span className="section-icon">📁</span> PART 3 FILES
+                <span className="section-icon">📁</span> PART 7 FILES
                 <span className="clue-count">{clues.length} CLUE{clues.length !== 1 ? 'S' : ''}</span>
               </div>
 
@@ -180,30 +173,12 @@
             {clues.length > 0 && (
               <div style={{marginTop: '3rem', marginBottom: '2rem', display: 'flex', justifyContent: 'center'}}>
                 <button className="enter-btn" onClick={handleContinue} style={{maxWidth: '400px'}}>
-                  CONTINUE THE INVESTIGATION &rarr;
+                  PROCEED TO FINAL LOCK &rarr;
                 </button>
               </div>
             )}
             </main>
           </div>
-
-          {showMurderNotification && (
-            <div className="evidence-modal" style={{zIndex: 9999}}>
-              <button onClick={() => setShowMurderNotification(false)} className="evidence-modal-close" style={{zIndex: 9999}}>✕</button>
-              <div className="evidence-modal-gallery" style={{flexDirection: 'column', alignItems: 'center', textAlign: 'center'}}>
-                <div style={{fontSize: '4rem', marginBottom: '1rem'}}>☠️</div>
-                <div style={{fontSize: '1.2rem', fontFamily: 'var(--font-type)', color: 'var(--ink-mid)'}}>
-                  A body has just been discovered.<br/><br/>
-                  The timeline has accelerated. The perpetrator is escalating.<br/>
-                  We do not have much time.
-                </div>
-              </div>
-              <div className="evidence-modal-title" style={{color: '#8a2323'}}>⚠ CRITICAL INCIDENT REPORT: MURDER ⚠</div>
-              <button onClick={() => setShowMurderNotification(false)} className="enter-btn" style={{maxWidth: '400px', marginTop: '2rem'}}>
-                ACKNOWLEDGE & RETURN TO FILES
-              </button>
-            </div>
-          )}
         </React.Fragment>
       );
     }

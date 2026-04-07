@@ -68,6 +68,36 @@ window.getDB = function() {
     mediaType: "document"
   })) updated = true;
 
+  if (syncDefaultClueByTitle("Investigation Hint 1", 4, {
+    description: "A mysterious image has been uncovered. Examine it closely.",
+    mediaUrl: "Hint1.jpeg",
+    mediaType: "image"
+  })) updated = true;
+
+  if (syncDefaultClueByTitle("Investigation Hint 2", 5, {
+    description: "Another mysterious image has been uncovered. Examine it carefully.",
+    mediaUrl: "Hint2.jpeg",
+    mediaType: "image"
+  })) updated = true;
+
+  if (syncDefaultClueByTitle("Investigation Hint 3", 6, {
+    description: "The final transmission has arrived.",
+    mediaUrl: "Hint3.jpeg",
+    mediaType: "image"
+  })) updated = true;
+
+  if (syncDefaultClueByTitle("Final Death Certificate", 7, {
+    description: "The official death certificate. Review the findings.",
+    mediaUrl: "DC.pdf",
+    mediaType: "document"
+  })) updated = true;
+
+  if (syncDefaultClueByTitle("Final Case Summary", 7, {
+    description: "The comprehensive case summary.",
+    mediaUrl: "Case summary .pdf",
+    mediaType: "document"
+  })) updated = true;
+
   if (updated) {
     localStorage.setItem(DB_KEY, JSON.stringify(parsed));
   }

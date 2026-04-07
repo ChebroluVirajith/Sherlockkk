@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SHER LOCKED AGAIN?! — PART 8: THE CONCLUSION</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/old-london" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="db.js"></script>
+</head>
+<body class="feed-page">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [teamName, setTeamName] = useState(null);
+      const [passcode, setPasscode] = useState("");
+      const [error, setError] = useState("");
+      const [solved, setSolved] = useState(false);
+
+      useEffect(() => {
+        const tName = localStorage.getItem("noir_team");
+        if (!tName) {
+          window.location.href = "index.html";
+          return;
+        }
+        setTeamName(tName);
+      }, []);
+
+      const handleLogout = () => {
+        if (confirm("Leave game?")) {
+          localStorage.removeItem("noir_team");
+          localStorage.removeItem("noir_members");
+          window.location.href = "index.html";
+        }
+      };
+
+      const handleVerify = () => {
+        const val = passcode.toUpperCase().trim();
+        if (val === "LIES") {
+          setSolved(true);
+          setError("");
+        } else {
+          setError("INCORRECT PASSCODE. THE MYSTERY REMAINS UNSOLVED.");
+        }
+      };
+
+      if (!teamName) return null;
+
+      return (
+        <React.Fragment>
+          <div className="paper-texture"></div>
+          <div className="vignette"></div>
+
+          <header className="feed-header">
+            <div className="header-left">
+              <span className="logo-sm">SHER LOCKED</span>
+              <span className="header-sep">|</span>
+              <span className="live-indicator"></span>
+              <span id="roundLabel">PART 8: CONCLUSION</span>
+            </div>
+            <div className="header-right">
+              <span className="team-badge">UNIT: {teamName}</span>
+              <button className="logout-btn" title="Leave game" onClick={handleLogout}>✕</button>
+            </div>
+          </header>
+
+          <div className="feed-layout-full" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', position: 'relative', zIndex: 50}}>
+            <main className="clues-col-full" style={{maxWidth: '600px', width: '100%', position: 'relative', zIndex: 50}}>
+              
+              {!solved ? (
+                <div style={{marginTop: '1.5rem', padding: '3rem 2rem', background: 'var(--paper)', border: '1px solid var(--rule-light)', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.3)'}}>
+                  <div className="section-icon" style={{fontSize: '3rem', marginBottom: '1rem'}}>🔐</div>
+                  <div style={{fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'var(--font-title)', color: 'var(--ink-dark)'}}>THE FINAL LOCK</div>
+                  <div style={{marginBottom: '2rem', fontFamily: 'var(--font-type)', color: 'var(--ink-mid)'}}>
+                    You have gathered all the case files. Analyze the evidence to discover the final password.
+                  </div>
+                  
+                  <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'}}>
+                    <div style={{display: 'flex', gap: '0.5rem', justifyContent: 'center', width: '100%', maxWidth: '400px'}}>
+                      <input 
+                        type="text" 
+                        className="answer-input" 
+                        placeholder="Enter Final Passcode..." 
+                        value={passcode}
+                        onChange={(e) => setPasscode(e.target.value)}
+                        style={{flex: 1, minHeight: '50px'}} 
+                      />
+                      <button 
+                        className="submit-btn" 
+                        style={{minHeight: '50px', padding: '0 2rem'}}
+                        onClick={handleVerify}>
+                        SUBMIT
+                      </button>
+                    </div>
+                    {error && <div className="error-msg" style={{display: 'block', marginTop: '1rem'}}>{error}</div>}
+                  </div>
+                </div>
+              ) : (
+                <div style={{marginTop: '1.5rem', padding: '3rem 2rem', background: 'var(--paper)', border: '1px solid var(--rule-light)', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.3)'}}>
+                   <div className="section-icon" style={{fontSize: '3rem', marginBottom: '1rem'}}>🏆</div>
+                   <div style={{fontSize: '2rem', marginBottom: '1rem', fontFamily: 'var(--font-title)', color: 'var(--ink-dark)'}}>CASE CLOSED...?</div>
+                   <div style={{marginBottom: '1rem', fontFamily: 'var(--font-type)', color: 'var(--ink-mid)', fontSize: '1.2rem', lineHeight: '1.6'}}>
+                     Congratulations, {teamName}. You have successfully unraveled the mystery and solved the case...
+                   </div>
+                   <div style={{color: '#d32f2f', fontSize: '2.5rem', fontWeight: 'bold', fontFamily: 'var(--font-title)', marginBottom: '2rem', textShadow: '1px 1px 3px rgba(0,0,0,0.2)'}}>
+                     Iris is still missing
+                   </div>
+                   <button className="enter-btn" onClick={() => window.location.href="index.html"} style={{maxWidth: '350px', margin: '0 auto'}}>RETURN TO HEADQUARTERS</button>
+                </div>
+              )}
+
+            </main>
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
