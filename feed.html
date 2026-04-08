@@ -140,17 +140,6 @@
                             {modals[clue.id] && (
                               <div className="evidence-modal">
                                 <button onClick={() => closeModal(clue.id)} className="evidence-modal-close">✕</button>
-                                <div className="evidence-modal-gallery">
-                                  <img src="post1.jpeg" alt="Post 1" />
-                                  <img src="post2.jpeg" alt="Post 2" />
-                                  <img src="post3.jpeg" alt="Post 3" />
-                                  <img src="post4.jpeg" alt="Post 4" />
-                                  <img src="post5.jpeg" alt="Post 5" />
-                                  <img src="post6.jpeg" alt="Post 6" />
-                                  <img src="post7.jpeg" alt="Post 7" />
-                                  <img src="post8.jpeg" alt="Post 8" />
-                                </div>
-                                <div className="evidence-modal-title">⚠ NEW EVIDENCE UNCOVERED ⚠</div>
                                 {!showContinue[clue.id] ? (
                                   <div style={{marginTop: '1.5rem', padding: '1.5rem', background: 'var(--paper)', border: '1px solid var(--rule-light)', textAlign: 'center'}}>
                                     <div style={{marginBottom: '1rem', fontFamily: 'var(--font-type)', color: 'var(--ink-mid)'}}>ENTER DECRYPTED PASSCODE</div>
@@ -183,9 +172,22 @@
                                     </div>
                                   </div>
                                 ) : (
-                                  <button onClick={handleContinue} className="enter-btn" style={{maxWidth: '400px', marginTop: '2rem'}}>
-                                    CONTINUE THE INVESTIGATION &rarr;
-                                  </button>
+                                  <React.Fragment>
+                                    <div className="evidence-modal-title">⚠ NEW EVIDENCE UNCOVERED ⚠</div>
+                                    <div className="evidence-modal-gallery">
+                                      <img src="post1.jpeg" alt="Post 1" />
+                                      <img src="post2.jpeg" alt="Post 2" />
+                                      <img src="post3.jpeg" alt="Post 3" />
+                                      <img src="post4.jpeg" alt="Post 4" />
+                                      <img src="post5.jpeg" alt="Post 5" />
+                                      <img src="post6.jpeg" alt="Post 6" />
+                                      <img src="post7.jpeg" alt="Post 7" />
+                                      <img src="post8.jpeg" alt="Post 8" />
+                                    </div>
+                                    <button onClick={handleContinue} className="enter-btn" style={{maxWidth: '400px', marginTop: '2rem'}}>
+                                      CONTINUE THE INVESTIGATION &rarr;
+                                    </button>
+                                  </React.Fragment>
                                 )}
                               </div>
                             )}
